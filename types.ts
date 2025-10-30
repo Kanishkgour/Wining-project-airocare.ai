@@ -24,8 +24,27 @@ export interface KeyFinding {
   severity: 'info' | 'low' | 'medium' | 'high';
 }
 
+export interface ChartDataPoint {
+    label: string;
+    value: number;
+}
+
+export interface Visualization {
+    title: string;
+    type: 'bar'; // Currently supporting only bar charts
+    data: ChartDataPoint[];
+}
+
+export interface DoctorAdvice {
+    title: string;
+    advice: string;
+    recommendations: string[];
+}
+
 export interface StructuredAIResponse {
   summary: string;
   keyFindings: KeyFinding[];
   labResults?: LabResultDataPoint[];
+  visualizations?: Visualization[];
+  doctorAdvice?: DoctorAdvice;
 }

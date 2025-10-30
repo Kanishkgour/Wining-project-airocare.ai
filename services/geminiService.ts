@@ -49,6 +49,44 @@ const responseSchema = {
         },
         required: ['name', 'value', 'unit', 'normalRange', 'status']
       }
+    },
+    visualizations: {
+        type: Type.ARRAY,
+        description: "An array of chart objects to visualize data. Generate this only when there are multiple related data points suitable for a chart (e.g., a blood panel).",
+        items: {
+            type: Type.OBJECT,
+            properties: {
+                title: { type: Type.STRING, description: "A descriptive title for the chart." },
+                type: { type: Type.STRING, enum: ['bar'], description: "The type of chart to display. Currently, only 'bar' is supported." },
+                data: {
+                    type: Type.ARRAY,
+                    description: "The data points for the chart.",
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            label: { type: Type.STRING, description: "The label for the data point (e.g., 'WBC')." },
+                            value: { type: Type.NUMBER, description: "The numeric value for the data point. This MUST be a number." },
+                        },
+                        required: ['label', 'value']
+                    }
+                }
+            },
+            required: ['title', 'type', 'data']
+        }
+    },
+    doctorAdvice: {
+        type: Type.OBJECT,
+        description: "A section for providing direct advice to the patient, written from the perspective of a caring doctor. This should only be populated for Patient Mode.",
+        properties: {
+            title: { type: Type.STRING, description: "A clear title, e.g., 'Doctor's Advice' or 'Next Steps'." },
+            advice: { type: Type.STRING, description: "A paragraph of reassuring advice explaining the results and the overall situation in simple terms." },
+            recommendations: {
+                type: Type.ARRAY,
+                description: "A list of clear, actionable recommendations for the patient.",
+                items: { type: Type.STRING }
+            }
+        },
+        required: ['title', 'advice', 'recommendations']
     }
   },
   required: ['summary', 'keyFindings']
@@ -62,14 +100,18 @@ const getSystemInstruction = (mode: ChatMode): string => {
     - 'summary': Provide a concise clinical summary highlighting critical data points.
     - 'keyFindings': Detail significant findings, differential diagnoses, and potential next steps. Use technical language. Set severity based on clinical urgency.
     - 'labResults': Extract all quantitative lab results precisely.
+    - 'visualizations': If the report contains multiple related quantitative values (like a complete blood count), generate a 'bar' chart visualization. The values in the chart data must be numeric.
+    - 'doctorAdvice': This field must be null or omitted for Doctor Mode.
     Your tone must be professional, technical, and data-driven.`;
   }
-  return `You are a friendly and empathetic medical analysis AI for patients. When given a medical report, provide a structured JSON response.
-  The JSON object must conform to this schema: ${JSON.stringify(responseSchema)}.
+  return `You are a caring and knowledgeable doctor explaining a medical report to a patient. Your tone is empathetic, reassuring, and clear.
+  When given a report, provide a structured JSON response that conforms to this schema: ${JSON.stringify(responseSchema)}.
   - 'summary': Explain the report's purpose and overall result in simple, easy-to-understand language. Avoid jargon.
   - 'keyFindings': Break down complex terms and findings. For each finding, explain what it means in a reassuring tone. Set severity to 'high' for anything that requires immediate consultation, 'medium' for follow-ups, and 'low' or 'info' for minor notes.
   - 'labResults': Extract key lab results and explain what each test measures.
-  IMPORTANT: You must never provide a diagnosis or medical advice. Always end the summary with a clear disclaimer to consult their doctor.`;
+  - 'visualizations': If there are related lab results, create a simple 'bar' chart to help visualize them. The values must be numeric.
+  - 'doctorAdvice': THIS IS THE MOST IMPORTANT PART. Provide a dedicated section with your advice. Include a clear title, a paragraph explaining what to do next, and a bulleted list of 2-4 actionable recommendations (e.g., 'Schedule a follow-up appointment with your doctor', 'Continue monitoring your symptoms').
+  IMPORTANT: You must never provide a final diagnosis. Always end the 'advice' text with a clear disclaimer to consult their real-world doctor for medical decisions.`;
 };
 
 let chat: Chat | null = null;
