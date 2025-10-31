@@ -15,6 +15,10 @@ import { PrivacyToggle } from './components/PrivacyToggle';
 
 type UserRole = 'patient' | 'doctor';
 
+const USER_ROLE_KEY = 'airocare-userRole';
+const MODE_KEY = 'airocare-mode';
+const getMessagesKey = (role: UserRole, mode: ChatMode) => `airocare-messages-${role}-${mode}`;
+
 // Declare pdfjsLib to satisfy TypeScript since it's loaded from a script tag
 declare const pdfjsLib: any;
 
@@ -58,6 +62,39 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Load state from localStorage on initial mount
+  useEffect(() => {
+    const savedRole = localStorage.getItem(USER_ROLE_KEY) as UserRole | null;
+    if (savedRole) {
+      setUserRole(savedRole);
+      
+      const savedMode = localStorage.getItem(MODE_KEY) as ChatMode | null;
+      const initialMode = savedMode ?? (savedRole === 'doctor' ? ChatMode.Doctor : ChatMode.Patient);
+      setMode(initialMode);
+      
+      const key = getMessagesKey(savedRole, initialMode);
+      const savedMessages = localStorage.getItem(key);
+      if (savedMessages) {
+        try {
+          setMessages(JSON.parse(savedMessages));
+        } catch (e) {
+          setMessages([]);
+        }
+      }
+    }
+  }, []);
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    if (userRole) {
+      localStorage.setItem(USER_ROLE_KEY, userRole);
+      localStorage.setItem(MODE_KEY, mode);
+      const key = getMessagesKey(userRole, mode);
+      localStorage.setItem(key, JSON.stringify(messages));
+    }
+  }, [userRole, mode, messages]);
+
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
@@ -66,14 +103,27 @@ const App: React.FC = () => {
     setUserRole(role);
     const initialMode = role === 'doctor' ? ChatMode.Doctor : ChatMode.Patient;
     setMode(initialMode);
-    setMessages([]);
+
+    const key = getMessagesKey(role, initialMode);
+    const savedMessages = localStorage.getItem(key);
+    try {
+        setMessages(savedMessages ? JSON.parse(savedMessages) : []);
+    } catch(e) {
+        setMessages([]);
+    }
     resetChat();
   };
 
   const handleModeChange = (newMode: ChatMode) => {
     if (mode !== newMode && userRole === 'doctor') {
       setMode(newMode);
-      setMessages([]); 
+      const key = getMessagesKey(userRole, newMode);
+      const savedMessages = localStorage.getItem(key);
+       try {
+          setMessages(savedMessages ? JSON.parse(savedMessages) : []);
+      } catch(e) {
+          setMessages([]);
+      }
       resetChat();
     }
   }
@@ -81,6 +131,10 @@ const App: React.FC = () => {
   const handlePrivacyToggle = (enabled: boolean) => {
     setIsPrivacyMode(enabled);
     if (enabled) {
+      if (userRole) {
+        const key = getMessagesKey(userRole, mode);
+        localStorage.removeItem(key);
+      }
       setMessages([]);
       resetChat();
       setNotification('Privacy Mode enabled. Chat has been cleared.');

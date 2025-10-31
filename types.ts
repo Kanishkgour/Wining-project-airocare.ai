@@ -22,6 +22,7 @@ export interface KeyFinding {
   title: string;
   explanation: string;
   severity: 'info' | 'low' | 'medium' | 'high';
+  affectedBodyPart?: 'head' | 'heart' | 'lungs' | 'liver' | 'kidneys' | 'stomach' | 'blood' | 'general';
 }
 
 export interface ChartDataPoint {

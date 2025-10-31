@@ -123,8 +123,10 @@ const getSystemInstruction = (mode: ChatMode): string => {
 let chat: Chat | null = null;
 let currentMode: ChatMode | null = null;
 
+// FIX: Switched from `import.meta.env` to `process.env` for API key and improved error handling to comply with guidelines.
 export const generateResponse = async (mode: ChatMode, prompt: string): Promise<string> => {
   if (!process.env.API_KEY) {
+    // This error will be caught by the calling function in App.tsx and show a generic message.
     throw new Error("API_KEY environment variable not set");
   }
 
